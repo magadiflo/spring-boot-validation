@@ -432,3 +432,23 @@ $ curl -v -X POST -H "Content-Type: application/json" -d "{\"firstName\": \"Liz\
 $ curl -v -X PUT -H "Content-Type: application/json" -d "{\"firstName\": \"Lizbeth\", \"lastName\": \"Carbajal\", \"birthdate\": \"1989-08-31\", \"dni\": \"45718525\", \"email\": \"libra_08_31@gmail.com\", \"phoneNumber\": \"943858596\", \"age\": 34, \"salary\": 2500, \"active\": true}" http://localhost:8080/api/v1/users/31 | jq
 $ curl -v -X DELETE http://localhost:8080/api/v1/users/31 | jq
 ````
+
+## Prácticas recomendadas de API REST
+
+- Siempre validar los datos (documento JSON) en la payload de la solicitud.
+- Si los datos no son válidos, devuelva un `status code 400 (Bad Request)` con un mensaje de error claro.
+
+## [Jakarta Bean Validation](https://beanvalidation.org/)
+
+- `Java Bean Validation` es una especificación de Java que le permite expresar restricciones en modelos de objetos a
+  través de anotaciones como `@NotNull`, `@NotBlank`, `@Length`, etc.
+- Proporciona API para validar objetos y gráficos de objetos.
+- Puede escribir restricciones personalizadas si las integradas no satisfacen sus necesidades.
+- `Java Bean Validation` ahora es `Jakarta Bean Validation`.
+
+## Hibernate Validator: La implementación de referencia de Validación de Bean
+
+- `Hibernate Validator` es una implementación de referencia de la especificación `Java Bean Validation`.
+- Proporciona restricciones y API integradas adicionales.
+- `Hibernate validator` no viene con `Spring Data JPA` de manera predeterminada. Debemos declarar la dependencia
+  `spring-boot-starter-validation`.
