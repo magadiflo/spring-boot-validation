@@ -362,11 +362,7 @@ excepción la manejaremos con una clase especial que a continuación se muestra.
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<ErrorResponse<String>> userNotFoundException(UserNotFoundException exception, HttpHeaders headers,
-                                                                       HttpStatus status, WebRequest request) {
-        log.info("Content-Type: {}", headers.getContentType());
-        log.info("Status: {}", status.value());
-        log.info("ContextPath: {}", request.getContextPath());
+    public ResponseEntity<ErrorResponse<String>> userNotFoundException(UserNotFoundException exception) {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse<>(Map.of("message", exception.getMessage())));
@@ -519,6 +515,7 @@ public class UserRequest {
     @Pattern(regexp = "\\d{8}", message = "El DNI debe tener exactamente 8 dígitos")
     private String dni;
 
+    @NotBlank(message = "El correo no puede estar en blanco")
     @Email(message = "Debe ser una dirección de correo válida")
     private String email;
 

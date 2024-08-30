@@ -28,6 +28,7 @@ public class UserRequest {
     @Pattern(regexp = "\\d{8}", message = "El DNI debe tener exactamente 8 dígitos")
     private String dni;
 
+    @NotBlank(message = "El correo no puede estar en blanco")
     @Email(message = "Debe ser una dirección de correo válida")
     private String email;
 
