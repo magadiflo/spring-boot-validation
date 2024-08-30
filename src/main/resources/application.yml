@@ -1,3 +1,22 @@
+server:
+  port: 8080
+  error:
+    include-message: always
+
 spring:
   application:
     name: spring-boot-validation
+  datasource:
+    url: jdbc:postgresql://localhost:5433/db_spring_boot_validation
+    username: magadiflo
+    password: magadiflo
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG

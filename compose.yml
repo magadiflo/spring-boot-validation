@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:15.2-alpine
+    container_name: c-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: db_spring_boot_validation
+      POSTGRES_USER: magadiflo
+      POSTGRES_PASSWORD: magadiflo
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+    name: postgres_data

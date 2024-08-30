@@ -50,3 +50,55 @@ conjunto de anotaciones para validar campos de manera sencilla.
 </dependencies>
 ````
 
+## Docker compose para crear contenedor de PostgreSQL
+
+Creamos el archivo `compose.yml` donde agregaremos el siguiente servicio para crear un contendor de postgres con docker.
+
+````yml
+services:
+  postgres:
+    image: postgres:15.2-alpine
+    container_name: c-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: db_spring_boot_validation
+      POSTGRES_USER: magadiflo
+      POSTGRES_PASSWORD: magadiflo
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+    name: postgres_data
+````
+
+## Crea configuración de la aplicación
+
+En el archivo `application.yml` agregamos la siguiente configuración.
+
+````yml
+server:
+  port: 8080
+  error:
+    include-message: always
+
+spring:
+  application:
+    name: spring-boot-validation
+  datasource:
+    url: jdbc:postgresql://localhost:5433/db_spring_boot_validation
+    username: magadiflo
+    password: magadiflo
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+````
