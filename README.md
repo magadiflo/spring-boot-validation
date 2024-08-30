@@ -680,3 +680,129 @@ $ curl -v -X POST -H "Content-Type: application/json" -d "{\"firstName\": \"L\",
 ````
 
 Estas mismas validaciones se aplicarán cuando se trate de actualizar un usuario.
+
+## Composición de Restricciones
+
+Supongamos que tenemos un campo con muchas anotaciones de validación y queremos agruparlas en uno solo, es decir, si
+ocurre un error que es validado por cualquiera de las anotaciones de dicho campo, que nos muestre un mensaje genérico
+para ese grupo.
+
+En nuestro caso crearemos una anotación `@GroupEmail` que será un ejemplo de una `composición de restricciones` en
+`Jakarta Bean Validation`, lo que significa que agrupa varias validaciones estándar en una única anotación
+personalizada.
+
+````java
+
+@Documented
+@Constraint(validatedBy = {})
+@Target({METHOD, FIELD, ANNOTATION_TYPE, CONSTRUCTOR, PARAMETER, TYPE_USE})
+@Retention(RUNTIME)
+@ReportAsSingleViolation
+@NotBlank(message = "Email must not be blank") //Este mensaje será ignorado
+@Email(message = "Email is not valid") //Este mensaje será ignorado
+public @interface GroupEmail {
+    String message() default "Error en el campo email, verifique que no esté en blanco y que sea un email con formato válido";  //Este será el mensaje a retornar si falla @NotBlank o @Email
+
+    Class<?>[] groups() default {};
+
+    Class<? extends Payload>[] payload() default {};
+}
+````
+
+Vamos a desglosar cada línea para entender su propósito:
+
+- `@Documented`, indica que la anotación `@GroupEmail` debe ser incluida en la documentación generada por herramientas
+  como Javadoc. Es una práctica estándar para mantener la documentación clara y completa.
+
+
+- `@Constraint(validatedBy = {})`, define que esta anotación es una restricción de validación. El atributo `validatedBy`
+  suele especificar la clase que implementa la lógica de validación personalizada, pero en este caso, está vacío `({})`
+  porque estamos utilizando validaciones estándar de Bean Validation (`@NotBlank` y `@Email`) en lugar de implementar
+  una lógica personalizada.
+
+
+- `@Target({METHOD, FIELD, ANNOTATION_TYPE, CONSTRUCTOR, PARAMETER, TYPE_USE})`, especifica los elementos en los que se
+  puede aplicar la anotación @GroupEmail. En este caso, puede aplicarse a métodos, campos, otras anotaciones,
+  constructores, parámetros, y tipos de uso. Esta flexibilidad permite que la anotación se use en diversos contextos.
+  Con respecto al `TYPE_USE` es una opción más avanzada en las anotaciones de Java que permite que la anotación se
+  aplique en casi cualquier contexto donde se use un tipo. Este es un concepto introducido en Java 8 y es parte de las
+  mejoras para proporcionar una mayor flexibilidad al aplicar anotaciones, por ejemplo:
+  `List<@GroupEmail String> emails;`
+
+
+- `@Retention(RUNTIME)`, define que la anotación `@GroupEmail` estará disponible en tiempo de ejecución. Es necesario
+  para que los frameworks de validación puedan leer y aplicar la validación.
+
+
+- `@ReportAsSingleViolation`, indica que si alguna de las validaciones agrupadas dentro de `@GroupEmail` falla, se
+  reportará como una sola violación, utilizando el mensaje de la anotación personalizada `@GroupEmail` en lugar de los
+  mensajes de las validaciones internas como `@NotBlank` o `@Email`. Es útil cuando deseas mostrar un mensaje genérico
+  en lugar de varios mensajes detallados de validación.
+
+
+- `@NotBlank` y `@Email`, son las anotaciones de jakarta beans validation que estamos agrupando en nuestra anotación
+  `@GroupEmail`.
+
+- `String message() default "..."`, define el atributo message de la anotación, que es el mensaje que se mostrará cuando
+  la validación falle. Este es el mensaje que se usará en lugar de los mensajes de `@NotBlank` o `@Email` debido a
+  `@ReportAsSingleViolation`.
+
+
+- `Class<?>[] groups() default {}`, define el atributo groups, que permite especificar diferentes grupos de validación
+  para los que esta anotación puede aplicarse. Es útil para validar diferentes escenarios, como crear o actualizar una
+  entidad.
+
+
+- `Class<? extends Payload>[] payload() default {}`, define el atributo payload, que puede usarse por clientes de la API
+  de validación para asociar metadatos con una restricción. Este es un atributo estándar en las anotaciones de
+  validación y generalmente se deja como está.
+
+**Resumen**
+
+La anotación `@GroupEmail` compone dos validaciones existentes (`@NotBlank` y `@Email`) y presenta un mensaje genérico
+cuando cualquiera de ellas falla. Gracias a `@ReportAsSingleViolation`, puedes usar un solo mensaje de error en lugar
+de los mensajes individuales de las anotaciones internas, proporcionando una experiencia de usuario más limpia.
+
+### Probando Composición de Restricciones
+
+En el apartado anterior creamos la anotación `@GroupEmail` que agrupa dos anotaciones `@NotBlank` e `@Email`. Pues,
+ahora los vamos a probar. Para eso, necesitamos modificar el atributo email de nuestro dto `UserRequest` para que
+ahora use nuestra anotación `@GroupEmail`.
+
+````java
+
+@ToString
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Getter
+@Setter
+public class UserRequest {
+    /* other properties */
+
+//    @NotBlank(message = "El correo no puede estar en blanco")
+//    @Email(message = "Debe ser una dirección de correo válida")
+//    private String email;
+
+    @GroupEmail
+    private String email;
+
+    /* other properties */
+}
+````
+
+Si ahora realizamos una petición enviando un email inválido, vemos que nuestra anotación está funcionando.
+
+````bash
+$ curl -v -X POST -H "Content-Type: application/json" -d "{\"firstName\": \"Liz\", \"lastName\": \"Gonzales\", \"birthdate\": \"1989-08-31\", \"dni\": \"45718525\", \"email\": \"libra_08_31\", \"phoneNumber\": \"985252525\", \"age\": 35, \"salary\": 3200, \"active\": true}" http://localhost:8080/api/v1/users | jq
+>
+< HTTP/1.1 400
+<
+{
+  "errors": {
+    "email": [
+      "Error en el campo email, verifique que no esté en blanco y que sea un email con formato válido"
+    ]
+  }
+}
+````

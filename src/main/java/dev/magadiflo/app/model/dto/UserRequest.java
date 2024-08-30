@@ -1,5 +1,6 @@
 package dev.magadiflo.app.model.dto;
 
+import dev.magadiflo.app.constraint.group.GroupEmail;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
@@ -28,8 +29,7 @@ public class UserRequest {
     @Pattern(regexp = "\\d{8}", message = "El DNI debe tener exactamente 8 dígitos")
     private String dni;
 
-    @NotBlank(message = "El correo no puede estar en blanco")
-    @Email(message = "Debe ser una dirección de correo válida")
+    @GroupEmail
     private String email;
 
     @Pattern(regexp = "\\+?[0-9. ()-]{7,25}", message = "Número de teléfono inválido")
