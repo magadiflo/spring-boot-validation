@@ -3,6 +3,7 @@ package dev.magadiflo.app.controller;
 import dev.magadiflo.app.model.dto.UserRequest;
 import dev.magadiflo.app.model.dto.UserResponse;
 import dev.magadiflo.app.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -30,7 +31,7 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<UserResponse> saveUser(@RequestBody UserRequest userRequest) {
+    public ResponseEntity<UserResponse> saveUser(@Valid @RequestBody UserRequest userRequest) {
         UserResponse userResponse = this.userService.saveUser(userRequest);
         return ResponseEntity
                 .created(URI.create("/api/v1/users/" + userResponse.getId()))
@@ -38,7 +39,7 @@ public class UserController {
     }
 
     @PutMapping(path = "/{userId}")
-    public ResponseEntity<UserResponse> updateUser(@RequestBody UserRequest userRequest, @PathVariable Long userId) {
+    public ResponseEntity<UserResponse> updateUser(@Valid @RequestBody UserRequest userRequest, @PathVariable Long userId) {
         return ResponseEntity.ok(this.userService.updateUser(userId, userRequest));
     }
 

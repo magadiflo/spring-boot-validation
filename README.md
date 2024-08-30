@@ -357,21 +357,26 @@ excepción la manejaremos con una clase especial que a continuación se muestra.
 
 ````java
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<ErrorResponse> userNotFoundException(UserNotFoundException exception) {
+    public ResponseEntity<ErrorResponse<String>> userNotFoundException(UserNotFoundException exception, HttpHeaders headers,
+                                                                       HttpStatus status, WebRequest request) {
+        log.info("Content-Type: {}", headers.getContentType());
+        log.info("Status: {}", status.value());
+        log.info("ContextPath: {}", request.getContextPath());
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse(Map.of("message", exception.getMessage())));
+                .body(new ErrorResponse<>(Map.of("message", exception.getMessage())));
     }
 
 }
 ````
 
 ````java
-public record ErrorResponse(Map<String, String> errors) {
+public record ErrorResponse<T>(Map<String, T> errors) {
 }
 ````
 
@@ -485,3 +490,126 @@ A continuación se muestran algunas restricciones que nos proporciona el `Hibern
 - UniqueElements
 - URL
 
+## Agrega anotaciones de validación en el DTO
+
+Nuestra clase `UserRequest` contendrá las anotaciones de validación.
+
+````java
+
+@ToString
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Getter
+@Setter
+public class UserRequest {
+    @NotBlank(message = "El nombre no puede estar en blanco")
+    @Size(min = 2, max = 50, message = "El nombre debe tener entre 2 y 50 caracteres")
+    private String firstName;
+
+    @NotBlank(message = "El apellido no puede estar en blanco")
+    @Size(min = 2, max = 50, message = "El apellido debe tener entre 2 y 50 caracteres")
+    private String lastName;
+
+    @NotNull(message = "La fecha de nacimiento no puede ser nula")
+    @Past(message = "La fecha de nacimiento debe ser en el pasado")
+    private LocalDate birthdate;
+
+    @NotBlank(message = "El DNI no puede estar en blanco")
+    @Pattern(regexp = "\\d{8}", message = "El DNI debe tener exactamente 8 dígitos")
+    private String dni;
+
+    @Email(message = "Debe ser una dirección de correo válida")
+    private String email;
+
+    @Pattern(regexp = "\\+?[0-9. ()-]{7,25}", message = "Número de teléfono inválido")
+    private String phoneNumber;
+
+    @Min(value = 0, message = "La edad mínima es 0")
+    @Max(value = 120, message = "La edad máxima es 120")
+    private Integer age;
+
+    @DecimalMin(value = "0.0", inclusive = false, message = "El salario debe ser mayor que 0")
+    @Digits(integer = 10, fraction = 2, message = "El salario debe tener un máximo de 10 dígitos enteros y 2 decimales")
+    private Double salary;
+
+    @NotNull(message = "El estado activo no puede ser nulo")
+    private Boolean active;
+}
+````
+
+## Activando validación de los objetos dto
+
+La anotación `@Valid` en Spring Boot se utiliza para activar la validación de un objeto en función de las reglas de
+validación definidas en sus atributos. Estas reglas de validación se especifican mediante anotaciones de `Java Bean
+Validation` (como `@NotNull`, `@Size`, `@Min`, `@Max`, etc.) en la clase de modelo.
+
+Cuando se usa en un controlador de Spring Boot, la anotación `@Valid` indica que se deben validar los parámetros de
+entrada. Si alguna de las validaciones falla, Spring lanzará una excepción `MethodArgumentNotValidException` y
+devolverá un `error HTTP` (por ejemplo, `400 Bad Request`) con los detalles de la validación fallida.
+
+A continuación se muestra el controlado con la anotación `@Valid` agregado a los objetos `dto` que recibimos por
+parámetro.
+
+````java
+
+@Slf4j
+@RequiredArgsConstructor
+@RestController
+@RequestMapping(path = "/api/v1/users")
+public class UserController {
+
+    private final UserService userService;
+
+    /* other methods */
+
+    @PostMapping
+    public ResponseEntity<UserResponse> saveUser(@Valid @RequestBody UserRequest userRequest) {
+        UserResponse userResponse = this.userService.saveUser(userRequest);
+        return ResponseEntity
+                .created(URI.create("/api/v1/users/" + userResponse.getId()))
+                .body(userResponse);
+    }
+
+    @PutMapping(path = "/{userId}")
+    public ResponseEntity<UserResponse> updateUser(@Valid @RequestBody UserRequest userRequest, @PathVariable Long userId) {
+        return ResponseEntity.ok(this.userService.updateUser(userId, userRequest));
+    }
+
+    /* another method */
+}
+````
+
+## Manejo de excepción para el MethodArgumentNotValidException
+
+Como se mencionó más arriba, si alguna de las validaciones falla, Spring lanzará una excepción
+`MethodArgumentNotValidException` y devolverá un `error HTTP` (por ejemplo, `400 Bad Request`) con los detalles de la
+validación fallida.
+
+En ese sentido, necesitamos agregar un método que nos permita manejar la excepción `MethodArgumentNotValidException`,
+donde obtengamos los errores de validación y lo mostremos en un formato legible al cliente.
+
+````java
+
+@Slf4j
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    /* another method: userNotFoundException() */
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse<List<String>>> methodArgumentNotValidException(MethodArgumentNotValidException exception) {
+        Map<String, List<String>> errors = new HashMap<>();
+
+        exception.getBindingResult().getAllErrors().forEach(error -> {
+            String fieldName = ((FieldError) error).getField();
+            String errorMessage = error.getDefaultMessage();
+
+            errors.computeIfAbsent(fieldName, s -> new ArrayList<>()).add(errorMessage);
+        });
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse<>(errors));
+    }
+
+}
+````
