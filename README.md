@@ -446,9 +446,42 @@ $ curl -v -X DELETE http://localhost:8080/api/v1/users/31 | jq
 - Puede escribir restricciones personalizadas si las integradas no satisfacen sus necesidades.
 - `Java Bean Validation` ahora es `Jakarta Bean Validation`.
 
-## Hibernate Validator: La implementación de referencia de Validación de Bean
+### [Lista de restricciones Java Bean Validation](https://jakarta.ee/specifications/bean-validation/3.1/apidocs/jakarta/validation/constraints/package-summary.html)
+
+Contiene todas las restricciones proporcionadas por `Jakarta Validation` también se denominan restricciones
+integradas.
+
+Estas restricciones no cubren todos los casos de uso funcional, pero representan todos los bloques fundamentales para
+expresar restricciones de bajo nivel en los básicos de JDK.
+
+A continuación se muestran algunos constraints que nos proporciona el `Jakarta Bean Validation`:
+
+- Email
+- Max
+- Min
+- NotBlank
+- NotEmpty
+- NotNull
+- FutureOrPresent
+- Null
+- Size
+
+## [Hibernate Validator: La implementación de referencia de Validación de Bean](https://docs.jboss.org/hibernate/stable/validator/api/org/hibernate/validator/constraints/package-summary.html)
 
 - `Hibernate Validator` es una implementación de referencia de la especificación `Java Bean Validation`.
 - Proporciona restricciones y API integradas adicionales.
 - `Hibernate validator` no viene con `Spring Data JPA` de manera predeterminada. Debemos declarar la dependencia
   `spring-boot-starter-validation`.
+
+A continuación se muestran algunas restricciones que nos proporciona el `Hibernate Validator`:
+
+- CreditCardNumber
+- Currency
+- EAN
+- ISBN
+- Length
+- Normalized
+- Range
+- UniqueElements
+- URL
+
