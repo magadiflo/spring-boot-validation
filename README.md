@@ -610,3 +610,73 @@ public class GlobalExceptionHandler {
 
 }
 ````
+
+## Probando Validación con Anotaciones
+
+Probamos registrar un usuario enviándole un objeto vacío.
+
+````bash
+$ curl -v -X POST -H "Content-Type: application/json" -d "{}" http://localhost:8080/api/v1/users | jq
+>
+< HTTP/1.1 400
+<
+{
+  "errors": {
+    "firstName": [
+      "El nombre no puede estar en blanco"
+    ],
+    "lastName": [
+      "El apellido no puede estar en blanco"
+    ],
+    "birthdate": [
+      "La fecha de nacimiento no puede ser nula"
+    ],
+    "active": [
+      "El estado activo no puede ser nulo"
+    ],
+    "email": [
+      "El correo no puede estar en blanco"
+    ],
+    "dni": [
+      "El DNI no puede estar en blanco"
+    ]
+  }
+}
+````
+
+Ahora tratamos de registrar un usuario enviándole datos inválidos como un dni con 12 dígitos, o un nombre de una sola
+letra, etc.
+
+````bash
+$ curl -v -X POST -H "Content-Type: application/json" -d "{\"firstName\": \"L\", \"lastName\": \"G\", \"birthdate\": \"2024-08-31\", \"dni\": \"147741258963\", \"email\": \"\", \"phoneNumber\": \"12345678914747\", \"age\": 150, \"salary\": 0, \"active\": true}" http://localhost:8080/api/v1/users | jq
+>
+< HTTP/1.1 400
+<
+{
+  "errors": {
+    "firstName": [
+      "El nombre debe tener entre 2 y 50 caracteres"
+    ],
+    "lastName": [
+      "El apellido debe tener entre 2 y 50 caracteres"
+    ],
+    "birthdate": [
+      "La fecha de nacimiento debe ser en el pasado"
+    ],
+    "salary": [
+      "El salario debe ser mayor que 0"
+    ],
+    "age": [
+      "La edad máxima es 120"
+    ],
+    "email": [
+      "El correo no puede estar en blanco"
+    ],
+    "dni": [
+      "El DNI debe tener exactamente 8 dígitos"
+    ]
+  }
+}
+````
+
+Estas mismas validaciones se aplicarán cuando se trate de actualizar un usuario.
