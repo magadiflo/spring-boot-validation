@@ -909,3 +909,61 @@ distinto de vacío. Con respecto a nuestra anotación personalizada `@Notificati
 el valor es `email` o `mobilePhone`; si el valor es null, simplemente lo va a dejar pasar, por eso es que agregamos
 la otra anotación `@NotBlank` para que evalúe esa condición.
 
+## Prueba Constraints Personalizados
+
+Vamos a probar el constraint personalizado que agregamos en el apartado anterior `@NotificationPreference`.
+
+En esta primera prueba no vamos a enviarle el campo `notificationPreference`, así que debería entrar en juego la
+validación de la anotación `@NotBlank`.
+
+````bash
+$ curl -v -X POST -H "Content-Type: application/json" -d "{\"firstName\": \"Liz\", \"lastName\": \"Gonzales\", \"birthdate\": \"1989-08-31\", \"dni\": \"45718525\", \"email\": \"libra_08_31@gmail.com\", \"phoneNumber\": \"985252525\", \"age\": 35, \"salary\": 3200, \"active\": true}" http://localhost:8080/api/v1/users | jq
+>
+< HTTP/1.1 400
+<
+{
+  "errors": {
+    "notificationPreference": [
+      "La preferencia de notificación no puede estar en blanco"
+    ]
+  }
+}
+````
+
+A continuación le mandamos el campo `notificationPreference` pero con un valor distinto de `email` o `mobilPhone`.
+
+````bash
+$ curl -v -X POST -H "Content-Type: application/json" -d "{\"firstName\": \"Liz\", \"lastName\": \"Gonzales\", \"birthdate\": \"1989-08-31\", \"dni\": \"45718525\", \"email\": \"libra_08_31@gmail.com\", \"phoneNumber\": \"985252525\", \"age\": 35, \"salary\": 3200, \"active\": true, \"notificationPreference\": \"mobile\"}" http://localhost:8080/api/v1/users | jq
+>
+< HTTP/1.1 400
+<
+{
+  "errors": {
+    "notificationPreference": [
+      "La preferencia de notificación debe ser email o mobilePhone"
+    ]
+  }
+}
+````
+
+Ahora le mandamos un valor correcto.
+
+````bash
+$ curl -v -X POST -H "Content-Type: application/json" -d "{\"firstName\": \"Liz\", \"lastName\": \"Gonzales\", \"birthdate\": \"1989-08-31\", \"dni\": \"45718525\", \"email\": \"libra_08_31@gmail.com\", \"phoneNumber\": \"985252525\", \"age\": 35, \"salary\": 3200, \"active\": true, \"notificationPreference\": \"mobilePhone\"}" http://localhost:8080/api/v1/users | jq
+>
+< HTTP/1.1 201
+<
+{
+  "id": 31,
+  "firstName": "Liz",
+  "lastName": "Gonzales",
+  "birthdate": "1989-08-31",
+  "dni": "45718525",
+  "email": "libra_08_31@gmail.com",
+  "phoneNumber": "985252525",
+  "age": 35,
+  "salary": 3200,
+  "active": true,
+  "notificationPreference": "mobilePhone"
+}
+````
