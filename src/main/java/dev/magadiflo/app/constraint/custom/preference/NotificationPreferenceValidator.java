@@ -1,4 +1,4 @@
-package dev.magadiflo.app.constraint.custom;
+package dev.magadiflo.app.constraint.custom.preference;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;

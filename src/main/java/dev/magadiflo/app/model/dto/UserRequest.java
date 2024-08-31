@@ -1,6 +1,7 @@
 package dev.magadiflo.app.model.dto;
 
-import dev.magadiflo.app.constraint.custom.NotificationPreference;
+import dev.magadiflo.app.constraint.custom.field.StringField;
+import dev.magadiflo.app.constraint.custom.preference.NotificationPreference;
 import dev.magadiflo.app.constraint.group.GroupEmail;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -18,8 +19,10 @@ public class UserRequest {
     @Size(min = 2, max = 50, message = "El nombre debe tener entre 2 y 50 caracteres")
     private String firstName;
 
-    @NotBlank(message = "El apellido no puede estar en blanco")
-    @Size(min = 2, max = 50, message = "El apellido debe tener entre 2 y 50 caracteres")
+    @StringField(notEmpty = true, min = 2, max = 50,
+            messageNotNull = "El campo no puede ser nulo",
+            messageNotEmpty = "El campo no puede ser vacío",
+            messageLength = "El campo debe tener un tamaño de entre 2 y 50 caracteres")
     private String lastName;
 
     @NotNull(message = "La fecha de nacimiento no puede ser nula")

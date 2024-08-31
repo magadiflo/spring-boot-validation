@@ -967,3 +967,194 @@ $ curl -v -X POST -H "Content-Type: application/json" -d "{\"firstName\": \"Liz\
   "notificationPreference": "mobilePhone"
 }
 ````
+
+## Crea nueva restricción personalizada
+
+Vamos a crear una nueva restricción personalizada que nos permitirá evaluar con una sola anotación, si el campo es nulo,
+si es vacío y la longitud que debe tener, cada uno de ellos con un mensaje personalizado.
+
+A continuación creamos nuestra interfaz de anotación llamada `StringField`. En esta interfaz agregamos métodos
+adicionales a los que por defecto tiene una interfaz de anotación. Los nuevos métodos agregados son `messageNotNull()`,
+`messageNotEmpty()`, `messageLength()`, `notEmpty()`, `min()` y `max()`.
+
+Los métodos agregados corresponden a lo que se personalizará en la anotación, por ejemplo, el método `notEmpty()`
+lo usaremos en la anotación de validación de esta manera `@StringField(notEmpty = true)`. Cada método agregado tiene
+un valor por defecto.
+
+Es importante notar que, esta anotación de validación personalizada estará vinculado a una clase, en nuestro caso la
+clase que crearemos será `StringFieldValidator`.
+
+````java
+
+@Documented
+@Constraint(validatedBy = {StringFieldValidator.class})
+@Target({METHOD, FIELD, ANNOTATION_TYPE, CONSTRUCTOR, PARAMETER, TYPE_USE})
+@Retention(RUNTIME)
+public @interface StringField {
+    String message() default "El campo contiene un valor incorrecto";
+
+    Class<?>[] groups() default {};
+
+    Class<? extends Payload>[] payload() default {};
+
+    /* Métodos agregados */
+
+    String messageNotNull() default "No está permitido que el campo sea nulo";
+
+    String messageNotEmpty() default "No está permitido que el campo esté vacío";
+
+    String messageLength() default "La longitud del campo es incorrecta";
+
+    boolean notEmpty() default false;
+
+    int min() default 0;
+
+    int max() default Integer.MAX_VALUE;
+}
+````
+
+A continuación se muestra la clase `StringFieldValidator` que definimos en la interfaz de anotación. En esta clase
+será donde definiremos la lógica de las validaciones.
+
+````java
+
+public class StringFieldValidator implements ConstraintValidator<StringField, String> {
+
+    private Boolean notEmpty;
+    private Integer min;
+    private Integer max;
+    private String messageNotNull;
+    private String messageNotEmpty;
+    private String messageLength;
+
+    @Override
+    public void initialize(StringField constraintAnnotation) {
+        this.notEmpty = constraintAnnotation.notEmpty();
+        this.min = constraintAnnotation.min();
+        this.max = constraintAnnotation.max();
+        this.messageNotNull = constraintAnnotation.messageNotNull();
+        this.messageNotEmpty = constraintAnnotation.messageNotEmpty();
+        this.messageLength = constraintAnnotation.messageLength();
+    }
+
+    @Override
+    public boolean isValid(String value, ConstraintValidatorContext context) {
+        context.disableDefaultConstraintViolation();
+
+        if (this.notEmpty && value == null) {
+            context.buildConstraintViolationWithTemplate(this.messageNotNull).addConstraintViolation();
+            return false;
+        }
+
+        if (this.notEmpty && value.trim().isEmpty()) {
+            context.buildConstraintViolationWithTemplate(this.messageNotEmpty).addConstraintViolation();
+            return false;
+        }
+
+        if ((this.min > 0 || this.max < Integer.MAX_VALUE) &&
+            (value != null) &&
+            (value.length() < this.min || value.length() > this.max)) {
+            context.buildConstraintViolationWithTemplate(this.messageLength).addConstraintViolation();
+            return false;
+        }
+
+        return true;
+    }
+}
+````
+
+El método `initialize()`, se utiliza para inicializar el validador con los valores de los atributos definidos en la
+anotación de validación personalizada (`@StringField`). Es llamado una vez al comienzo del ciclo de vida del validador.
+
+Por ejemplo, si definimos nuestra anotación `@StringField(notEmpty = true, min = 2, max = 50)`, en el método
+`initilize()`, se inicializarán los atributos `notEmpty`, `min` y `max` con los valores establecidos en la anotación.
+Los otros atributos (`messageNotNull`, `messageNotEmpty`, `messageLength`) que no fueron explícitamente definidos en la
+anotación usarán sus valores predeterminados definidos en la propia anotación `@StringField`.
+
+El método `isValid()` contiene la lógica para validar el valor de entrada según los criterios definidos en la anotación
+`@StringField`. Este método es llamado cada vez que se debe validar un valor.
+
+`context.disableDefaultConstraintViolation()`, deshabilita el mensaje de error por defecto de la anotación de
+validación. Esto permite personalizar completamente los mensajes de error.
+
+`context.buildConstraintViolationWithTemplate(this.messageNotNull).addConstraintViolation()`, crea una violación de
+restricción con el mensaje `messageNotNull`.
+
+Si el método `isValid()` retorna `false`, eso indica que la validación falló; en caso contrario, pasa la validación.
+
+Ahora que ya tenemos creada nuestra anotación personalizada, lo vamos a usar en el atributo `lastName` de nuestro dto.
+
+````java
+
+@ToString
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Getter
+@Setter
+public class UserRequest {
+    /* other properties */
+
+//    @NotBlank(message = "El apellido no puede estar en blanco")
+//    @Size(min = 2, max = 50, message = "El apellido debe tener entre 2 y 50 caracteres")
+//    private String lastName;
+
+    @StringField(notEmpty = true, min = 2, max = 50,
+            messageNotNull = "El campo no puede ser nulo",
+            messageNotEmpty = "El campo no puede ser vacío",
+            messageLength = "El campo debe tener un tamaño de entre 2 y 50 caracteres")
+    private String lastName;
+
+    /* other properties */
+}
+````
+
+## Prueba nueva restricción personalizada
+
+Realizamos una petición sin enviarle el campo `lastName` en la solicitud.
+
+````bash
+$ curl -v -X POST -H "Content-Type: application/json" -d "{\"firstName\": \"Liz\", \"birthdate\": \"1989-08-31\", \"dni\": \"45718525\", \"email\": \"libra_08_31@gmail.com\", \"phoneNumber\": \"985252525\", \"age\": 35, \"salary\": 3200, \"active\": true, \"notificationPreference\": \"mobilePhone\"}" http://localhost:8080/api/v1/users | jq
+>
+< HTTP/1.1 400
+<
+{
+  "errors": {
+    "lastName": [
+      "El campo no puede ser nulo"
+    ]
+  }
+}
+````
+
+Valida que no esté vacío el campo.
+
+````bash
+$ curl -v -X POST -H "Content-Type: application/json" -d "{\"firstName\": \"Liz\", \"lastName\": \"\", \"birthdate\": \"1989-08-31\", \"dni\": \"45718525\", \"email\": \"libra_08_31@gmail.com\", \"phoneNumber\": \"985252525\", \"age\": 35, \"salary\": 3200, \"active\": true, \"notificationPreference\": \"mobilePhone\"}" http://localhost:8080/api/v1/users | jq
+>
+< HTTP/1.1 400
+<
+{
+  "errors": {
+    "lastName": [
+      "El campo no puede ser vacío"
+    ]
+  }
+}
+````
+
+Valida que la longitud esté entre 2 y 50.
+
+````bash
+$ curl -v -X POST -H "Content-Type: application/json" -d "{\"firstName\": \"Liz\", \"lastName\": \"G\", \"birthdate\": \"1989-08-31\", \"dni\": \"45718525\", \"email\": \"libra_08_31@gmail.com\", \"phoneNumber\": \"985252525\", \"age\": 35, \"salary\": 3200, \"active\": true, \"notificationPreference\": \"mobilePhone\"}" http://localhost:8080/api/v1/users | jq
+>
+< HTTP/1.1 400
+<
+{
+  "errors": {
+    "lastName": [
+      "El campo debe tener un tamaño de entre 2 y 50 caracteres"
+    ]
+  }
+}
+````
