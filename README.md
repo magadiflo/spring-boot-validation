@@ -3,6 +3,12 @@
 Se toma como referencia el tutorial de `Code Java (youtube)` para la realización de este ejemplo. Adicionalmente, se
 incluirán otros ejemplos que los referenciaré a continuación.
 
+**Referencias**
+
+- [Spring Boot Bean Validation Example](https://examples.javacodegeeks.com/spring-boot-bean-validation-example/)
+- [Java Bean Validation](https://docs.spring.io/spring-framework/reference/core/validation/beanvalidation.html#validation-beanvalidation-spring-constraints)
+- [Spring Boot DTO Validation](https://medium.com/paysafe-bulgaria/springboot-dto-validation-good-practices-and-breakdown-fee69277b3b0)
+
 ---
 
 ## Aplicación Base
@@ -176,6 +182,7 @@ public class User {
     private Integer age;
     private Double salary;
     private Boolean active;
+    private String notificationPreference;
 }
 ````
 
@@ -210,6 +217,7 @@ public class UserRequest {
     private Integer age;
     private Double salary;
     private Boolean active;
+    private String notificationPreference;
 }
 ````
 
@@ -234,6 +242,7 @@ public class UserResponse {
     private Integer age;
     private Double salary;
     private Boolean active;
+    private String notificationPreference;
 }
 ````
 
@@ -255,6 +264,7 @@ public class UserMapper {
                 .age(user.getAge())
                 .salary(user.getSalary())
                 .active(user.getActive())
+                .notificationPreference(user.getNotificationPreference())
                 .build();
     }
 
@@ -269,9 +279,11 @@ public class UserMapper {
                 .age(userRequest.getAge())
                 .salary(userRequest.getSalary())
                 .active(userRequest.getActive())
+                .notificationPreference(userRequest.getNotificationPreference())
                 .build();
     }
 }
+
 ````
 
 ## Servicio
@@ -488,7 +500,7 @@ A continuación se muestran algunas restricciones que nos proporciona el `Hibern
 
 ## Agrega anotaciones de validación en el DTO
 
-Nuestra clase `UserRequest` contendrá las anotaciones de validación.
+Nuestra clase `UserRequest` contendrá las siguientes anotaciones de validación.
 
 ````java
 
@@ -532,6 +544,8 @@ public class UserRequest {
 
     @NotNull(message = "El estado activo no puede ser nulo")
     private Boolean active;
+
+    private String notificationPreference;
 }
 ````
 
@@ -806,3 +820,92 @@ $ curl -v -X POST -H "Content-Type: application/json" -d "{\"firstName\": \"Liz\
   }
 }
 ````
+
+## Configura Constraints Personalizados
+
+Puede crear un constraint personalizado cuando las restricciones integradas no sean adecuadas para sus necesidades
+específicas. Supongamos que tenemos un requisito que establece que solo se permiten dos valores posibles
+(`email` o `mobilePhone`) para el campo `notificationPreference` en la entidad `User`. Podemos crear una restricción
+personalizada para aplicar esta regla.
+
+Iniciamos creando la interfaz de anotación para nuestra restricción personalizada `@NotificationPreference`.
+
+````java
+
+@Documented
+@Constraint(validatedBy = {NotificationPreferenceValidator.class})
+@Target({METHOD, FIELD, ANNOTATION_TYPE, CONSTRUCTOR, PARAMETER, TYPE_USE})
+@Retention(RUNTIME)
+public @interface NotificationPreference {
+    String message() default "La preferencia de notificación debe ser email o mobilePhone";
+
+    Class<?>[] groups() default {};
+
+    Class<? extends Payload>[] payload() default {};
+}
+````
+
+En un apartado superior habíamos explicado lo que realiza cada una de las anotaciones que estamos agregando a nuestra
+anotación personalizada. Sin embargo, en esta oportunidad, si observamos el código anterior, estamos agregando algo
+más a la anotación `@Constraint` y eso es lo que vamos a explicar a continuación.
+
+`@Constraint(validatedBy = {NotificationPreferenceValidator.class})`, define que esta anotación es una restricción de
+validación. El atributo `validatedBy` suele especificar la clase que implementa la lógica de validación personalizada,
+en este caso, la clase que implementa la lógica de validación personalizada es `NotificationPreferenceValidator`.
+
+A continuación, crea la clase validadora `NotificationPreferenceValidator` que evaluará nuestros criterios.
+
+````java
+public class NotificationPreferenceValidator implements ConstraintValidator<NotificationPreference, String> {
+
+    private final List<String> notificationPreferences = List.of("email", "mobilePhone");
+
+    @Override
+    public boolean isValid(String value, ConstraintValidatorContext context) {
+        if (value != null) {
+            return this.notificationPreferences.contains(value);
+        }
+        return true;
+    }
+}
+````
+
+La clase validadora implementa la interfaz `ConstraintValidator`, que acepta el tipo de anotación y el tipo que se va a
+validar como argumentos de tipo genérico. En nuestro caso, los argumentos son `NotificationPreference` y `String`,
+respectivamente.
+
+La interfaz ConstraintValidator tiene un método que debemos implementar, `isValid()`, que devuelve un valor booleano.
+Aquí es donde colocamos nuestra lógica de validación.
+
+Para nuestro requisito simple, verificamos que el valor `String` que se pasa a `isValid()` esté incluido en nuestra
+lista de valores calificados: `email` y `mobilePhone`. Notar que la validación lo hacemos únicamente cuando el `value`
+es distinto de `null`; si es `null`, simplemente lo dejaremos pasar. Recordar que para cuando el valor sea `null`
+tenemos otras anotaciones que podemos usar, en nuestro caso veremos que más adelante usaremos el `@NotBlank`.
+
+El último paso es aplicar nuestra restricción personalizada al campo String `notificationPreference` de nuestra clase de
+entidad de la siguiente manera:
+
+````java
+
+@ToString
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Getter
+@Setter
+public class UserRequest {
+
+    /* other properties */
+
+    @NotBlank(message = "La preferencia de notificación no puede estar en blanco")
+    @NotificationPreference
+    private String notificationPreference;
+}
+````
+
+Notar que además de la restricción personalizada he agregado una anotación adicional propio del Jakarta Bean Validation
+`@NotBlank` para que evalúe que el valor para este atributo debe ser diferente de null y tener como mínimo un carácter
+distinto de vacío. Con respecto a nuestra anotación personalizada `@NotificationPreference`, únicamente va a evaluar si
+el valor es `email` o `mobilePhone`; si el valor es null, simplemente lo va a dejar pasar, por eso es que agregamos
+la otra anotación `@NotBlank` para que evalúe esa condición.
+

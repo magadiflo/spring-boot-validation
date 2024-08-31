@@ -19,6 +19,7 @@ public class UserMapper {
                 .age(user.getAge())
                 .salary(user.getSalary())
                 .active(user.getActive())
+                .notificationPreference(user.getNotificationPreference())
                 .build();
     }
 
@@ -33,6 +34,7 @@ public class UserMapper {
                 .age(userRequest.getAge())
                 .salary(userRequest.getSalary())
                 .active(userRequest.getActive())
+                .notificationPreference(userRequest.getNotificationPreference())
                 .build();
     }
 }

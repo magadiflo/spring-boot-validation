@@ -1,5 +1,6 @@
 package dev.magadiflo.app.model.dto;
 
+import dev.magadiflo.app.constraint.custom.NotificationPreference;
 import dev.magadiflo.app.constraint.group.GroupEmail;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -45,4 +46,8 @@ public class UserRequest {
 
     @NotNull(message = "El estado activo no puede ser nulo")
     private Boolean active;
+
+    @NotBlank(message = "La preferencia de notificación no puede estar en blanco")
+    @NotificationPreference
+    private String notificationPreference;
 }

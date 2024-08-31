@@ -26,4 +26,5 @@ public class User {
     private Integer age;
     private Double salary;
     private Boolean active;
+    private String notificationPreference;
 }

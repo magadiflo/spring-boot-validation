@@ -21,4 +21,5 @@ public class UserResponse {
     private Integer age;
     private Double salary;
     private Boolean active;
+    private String notificationPreference;
 }
